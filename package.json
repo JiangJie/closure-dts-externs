@@ -1,0 +1,67 @@
+{
+  "name": "closure-dts-externs",
+  "description": "Generate Closure Compiler externs from .d.ts type definitions.",
+  "author": "jiang115jie@gmail.com",
+  "license": "MIT",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "dist/main.cjs",
+  "module": "dist/main.mjs",
+  "types": "dist/main.d.ts",
+  "bin": {
+    "closure-dts-externs": "dist/cli.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/main.d.ts",
+      "import": "./dist/main.mjs",
+      "require": "./dist/main.cjs",
+      "default": "./dist/main.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md",
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "check": "pnpm exec tsc --noEmit",
+    "lint": "pnpm exec eslint .",
+    "prebuild": "pnpm run check && pnpm run lint",
+    "build": "pnpm exec vite build && node scripts/postbuild.ts",
+    "test": "pnpm exec vitest run --coverage",
+    "test:watch": "pnpm exec vitest",
+    "prepublishOnly": "pnpm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JiangJie/closure-dts-externs.git"
+  },
+  "keywords": [
+    "closure-compiler",
+    "externs",
+    "dts",
+    "typescript",
+    "codegen"
+  ],
+  "dependencies": {
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@types/node": "^25.6.0",
+    "@vitest/coverage-v8": "^4.1.4",
+    "eslint": "^10.2.0",
+    "typescript-eslint": "^8.58.2",
+    "vite": "^8.0.8",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.1.4"
+  }
+}
