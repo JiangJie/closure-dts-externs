@@ -4,8 +4,20 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { generate } from '../src/main.ts';
 
 const fixturePath = join('tests', 'fixtures', 'comprehensive.d.ts');
+const TMP_DIR = join('tests', '.tmp');
+const TMP_INPUT_DIR = join(TMP_DIR, 'input');
+const TMP_OUTPUT_DIR = join(TMP_DIR, 'output');
 
 describe('generate', () => {
+    beforeAll(() => {
+        mkdirSync(TMP_INPUT_DIR, { recursive: true });
+        mkdirSync(TMP_OUTPUT_DIR, { recursive: true });
+    });
+
+    afterAll(() => {
+        rmSync(TMP_DIR, { recursive: true, force: true });
+    });
+
     it('should return externs content as string', () => {
         const content = generate({ input: fixturePath });
 
@@ -126,16 +138,7 @@ describe('generate', () => {
     });
 
     describe('output', () => {
-        const tmpDir = join('tests', '.tmp');
-        const output = join(tmpDir, 'externs.js');
-
-        beforeAll(() => {
-            mkdirSync(tmpDir, { recursive: true });
-        });
-
-        afterAll(() => {
-            rmSync(tmpDir, { recursive: true, force: true });
-        });
+        const output = join(TMP_OUTPUT_DIR, 'externs.js');
 
         it('should write to file when output is provided', () => {
             const content = generate({ input: fixturePath, output });
@@ -274,16 +277,7 @@ describe('generate', () => {
     });
 
     describe('edge cases with custom .d.ts', () => {
-        const fixtureDir = join('tests', '.fixtures');
-        const fixtureFile = join(fixtureDir, 'custom.d.ts');
-
-        beforeAll(() => {
-            mkdirSync(fixtureDir, { recursive: true });
-        });
-
-        afterAll(() => {
-            rmSync(fixtureDir, { recursive: true, force: true });
-        });
+        const fixtureFile = join(TMP_INPUT_DIR, 'custom.d.ts');
 
         it('should skip anonymous class declarations', () => {
             writeFileSync(fixtureFile, `
@@ -322,7 +316,7 @@ declare const shouldAppear: string;
 `);
             const content = generate({
                 input: fixtureFile,
-                fileFilter: f => f.includes('.fixtures'),
+                fileFilter: f => f.includes('.tmp'),
             });
 
             expect(content).toContain('var shouldAppear;');
