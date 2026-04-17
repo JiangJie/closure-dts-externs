@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { generate } from '../src/main.ts';
 
 const fixturePath = join('tests', 'fixtures', 'comprehensive.d.ts');
@@ -138,16 +138,11 @@ describe('generate', () => {
             rmSync(tmpDir, { recursive: true, force: true });
         });
 
-        it('should write to file and log info when output is provided', () => {
-            const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
-
+        it('should write to file when output is provided', () => {
             const content = generate({ input: fixturePath, output });
 
             expect(existsSync(output)).toBe(true);
             expect(readFileSync(output, 'utf-8')).toBe(content);
-            expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining(`Generated ${output}`));
-
-            infoSpy.mockRestore();
         });
     });
 

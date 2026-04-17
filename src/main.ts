@@ -293,11 +293,6 @@ export function generate(options: GenerateOptions): string {
 
     if (output) {
         writeFileSync(output, content);
-
-        const totalMembers = [...interfaceMembers.values()].reduce((sum, m) => sum + m.size, 0);
-        console.info(`Generated ${output}`);
-        console.info(`  global vars: ${globalVars.length}, global functions: ${globalFunctions.size}`);
-        console.info(`  interface/class types: ${interfaceMembers.size}, total members: ${totalMembers}`);
     }
 
     return content;
