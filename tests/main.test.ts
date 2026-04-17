@@ -255,6 +255,20 @@ declare class Widget { dispose(): void; }
             expect(content).toContain('Widget.prototype.dispose;');
             expect(content.match(/function Widget\(\)/g)?.length).toBe(1);
         });
+        it('should merge same-name interface and class', () => {
+            writeFileSync(fixtureFile, `
+declare namespace NS {
+    interface Hybrid { fromInterface: string; }
+    class Hybrid { fromClass(): void; }
+}
+`);
+            const content = generateExterns({ input: fixtureFile });
+
+            expect(content).toContain('function Hybrid() {}');
+            expect(content).toContain('Hybrid.prototype.fromInterface;');
+            expect(content).toContain('Hybrid.prototype.fromClass;');
+            expect(content.match(/function Hybrid\(\)/g)?.length).toBe(1);
+        });
     });
 
     describe('e2e snapshot', () => {
