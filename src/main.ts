@@ -2,6 +2,27 @@ import { writeFileSync } from 'node:fs';
 import ts from 'typescript';
 
 /**
+ * Context passed to the `exclude` filter callback.
+ */
+export interface ExcludeContext {
+    /** The kind of declaration being visited. */
+    kind: 'namespace' | 'variable' | 'function' | 'interface' | 'class' | 'member';
+    /**
+     * Full scope path of the declaration.
+     * `undefined` for top-level declarations.
+     *
+     * @example
+     * ```
+     * 'TestLib'           // interface inside TestLib namespace
+     * 'TestLib.Inner'     // interface inside nested namespace
+     * 'TestLib.Logger'    // member of Logger interface in TestLib
+     * 'TopPlugin'         // member of top-level interface
+     * ```
+     */
+    scope?: string;
+}
+
+/**
  * Options for generating Closure Compiler externs.
  */
 export interface GenerateExternsOptions {
@@ -37,17 +58,28 @@ export interface GenerateExternsOptions {
     fileFilter?: (fileName: string) => boolean;
 
     /**
-     * Declaration names to exclude from output.
-     * Applies to `declare const/var/let` and `declare function`.
-     * Supports simple wildcard patterns with `*`.
+     * Filter to exclude declarations from output.
+     * Return `true` to exclude, `false` to include.
+     * For `namespace` kind, returning `true` skips the entire namespace and all its contents.
      *
      * @example
      * ```ts
-     * excludeDeclarations: ['console', 'set*', 'clear*', 'require', 'module', 'exports']
+     * // Exclude specific variables and functions
+     * exclude: (name) =>
+     *     name === 'console' || name.startsWith('set') || name.startsWith('clear')
+     *
+     * // Skip an entire namespace
+     * exclude: (name, { kind }) => kind === 'namespace' && name === 'AnotherLib'
+     *
+     * // Exclude a specific member
+     * exclude: (name, { kind, scope }) =>
+     *     kind === 'member' && scope === 'TestLib.Logger' && name === 'warn'
      * ```
      */
-    excludeDeclarations?: string[];
+    exclude?: (name: string, context: ExcludeContext) => boolean;
 }
+
+type ExcludeFilter = (name: string, context: ExcludeContext) => boolean;
 
 function getNodeName(node: ts.Node): string | undefined {
     const name = (node as ts.NamedDeclaration).name;
@@ -57,16 +89,17 @@ function getNodeName(node: ts.Node): string | undefined {
     return undefined;
 }
 
-function collectMembers(node: ts.Node, prefix = ''): Set<string> {
+function collectMembers(node: ts.Node, prefix: string, scope: string, filter?: ExcludeFilter): Set<string> {
     const members = new Set<string>();
     ts.forEachChild(node, child => {
         const memberName = getNodeName(child);
         if (!memberName) return;
+        if (filter?.(memberName, { kind: 'member', scope })) return;
         const path = prefix ? `${prefix}.${memberName}` : memberName;
         members.add(path);
         // Recursively expand inline object type literals (e.g. `env: { USER_DATA_PATH: string }`)
         if ((ts.isPropertySignature(child) || ts.isPropertyDeclaration(child)) && child.type && ts.isTypeLiteralNode(child.type)) {
-            for (const nested of collectMembers(child.type, path)) {
+            for (const nested of collectMembers(child.type, path, `${scope}.${memberName}`, filter)) {
                 members.add(nested);
             }
         }
@@ -90,48 +123,42 @@ function resolveTypeName(typeNode: ts.TypeNode): string | undefined {
     return undefined;
 }
 
-function visitNamespace(nsDecl: ts.ModuleDeclaration, interfaceMembers: Map<string, Set<string>>): void {
+function mergeMembers(map: Map<string, Set<string>>, name: string, members: Set<string>): void {
+    const existing = map.get(name);
+    if (existing) {
+        for (const m of members) {
+            existing.add(m);
+        }
+    } else {
+        map.set(name, members);
+    }
+}
+
+function visitNamespace(
+    nsDecl: ts.ModuleDeclaration,
+    interfaceMembers: Map<string, Set<string>>,
+    namespacePath: string,
+    filter?: ExcludeFilter,
+): void {
     const body = nsDecl.body as ts.ModuleBody;
     ts.forEachChild(body, child => {
         if (ts.isModuleDeclaration(child) && child.name && ts.isIdentifier(child.name)) {
-            visitNamespace(child, interfaceMembers);
+            const nestedName = child.name.text;
+            if (filter?.(nestedName, { kind: 'namespace', scope: namespacePath })) return;
+            visitNamespace(child, interfaceMembers, `${namespacePath}.${nestedName}`, filter);
         } else if (ts.isInterfaceDeclaration(child)) {
-            const existing = interfaceMembers.get(child.name.text);
-            const members = collectMembers(child);
-            if (existing) {
-                // Merge augmented interface declarations
-                for (const m of members) {
-                    existing.add(m);
-                }
-            } else {
-                interfaceMembers.set(child.name.text, members);
-            }
+            const name = child.name.text;
+            if (filter?.(name, { kind: 'interface', scope: namespacePath })) return;
+            const memberScope = `${namespacePath}.${name}`;
+            mergeMembers(interfaceMembers, name, collectMembers(child, '', memberScope, filter));
         } else if (ts.isClassDeclaration(child)) {
             const name = child.name?.text;
             if (!name) return;
-            const existing = interfaceMembers.get(name);
-            const members = collectMembers(child);
-            if (existing) {
-                for (const m of members) {
-                    existing.add(m);
-                }
-            } else {
-                interfaceMembers.set(name, members);
-            }
+            if (filter?.(name, { kind: 'class', scope: namespacePath })) return;
+            const memberScope = `${namespacePath}.${name}`;
+            mergeMembers(interfaceMembers, name, collectMembers(child, '', memberScope, filter));
         }
     });
-}
-
-function matchesPattern(name: string, pattern: string): boolean {
-    if (!pattern.includes('*')) {
-        return name === pattern;
-    }
-    const regex = new RegExp(`^${pattern.replace(/\*/g, '.*')}$`);
-    return regex.test(name);
-}
-
-function isExcluded(name: string, excludeDeclarations: string[]): boolean {
-    return excludeDeclarations.some(pattern => matchesPattern(name, pattern));
 }
 
 interface GlobalVarInfo {
@@ -215,7 +242,7 @@ export function generateExterns(options: GenerateExternsOptions): string {
         input,
         output,
         fileFilter = defaultFileFilter,
-        excludeDeclarations = [],
+        exclude: filter,
     } = options;
 
     const interfaceMembers = new Map<string, Set<string>>();
@@ -234,40 +261,30 @@ export function generateExterns(options: GenerateExternsOptions): string {
         if (!fileFilter(sourceFile.fileName)) continue;
         ts.forEachChild(sourceFile, node => {
             if (ts.isModuleDeclaration(node) && node.name && ts.isIdentifier(node.name)) {
-                visitNamespace(node, interfaceMembers);
+                const nsName = node.name.text;
+                if (filter?.(nsName, { kind: 'namespace' })) return;
+                visitNamespace(node, interfaceMembers, nsName, filter);
             } else if (ts.isVariableStatement(node)) {
                 // declare const/var/let xxx: Type
                 for (const decl of node.declarationList.declarations) {
                     const varName = getNodeName(decl);
-                    if (!varName || isExcluded(varName, excludeDeclarations)) continue;
+                    if (!varName || filter?.(varName, { kind: 'variable' })) continue;
                     const typeName = decl.type ? resolveTypeName(decl.type) : undefined;
                     globalVars.push({ varName, typeName });
                 }
             } else if (ts.isFunctionDeclaration(node) && node.name) {
                 const fnName = getNodeName(node);
-                if (fnName && !isExcluded(fnName, excludeDeclarations)) {
+                if (fnName && !filter?.(fnName, { kind: 'function' })) {
                     globalFunctions.add(fnName);
                 }
             } else if (ts.isInterfaceDeclaration(node)) {
-                const existing = interfaceMembers.get(node.name.text);
-                const members = collectMembers(node);
-                if (existing) {
-                    for (const m of members) {
-                        existing.add(m);
-                    }
-                } else {
-                    interfaceMembers.set(node.name.text, members);
-                }
+                const name = node.name.text;
+                if (filter?.(name, { kind: 'interface' })) return;
+                mergeMembers(interfaceMembers, name, collectMembers(node, '', name, filter));
             } else if (ts.isClassDeclaration(node) && node.name) {
-                const existing = interfaceMembers.get(node.name.text);
-                const members = collectMembers(node);
-                if (existing) {
-                    for (const m of members) {
-                        existing.add(m);
-                    }
-                } else {
-                    interfaceMembers.set(node.name.text, members);
-                }
+                const name = node.name.text;
+                if (filter?.(name, { kind: 'class' })) return;
+                mergeMembers(interfaceMembers, name, collectMembers(node, '', name, filter));
             }
         });
     }

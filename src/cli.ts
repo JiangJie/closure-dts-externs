@@ -41,11 +41,23 @@ if (positionals.length === 0) {
     process.exit(1);
 }
 
+function matchesPattern(name: string, pattern: string): boolean {
+    if (!pattern.includes('*')) {
+        return name === pattern;
+    }
+    const regex = new RegExp(`^${pattern.replace(/\*/g, '.*')}$`);
+    return regex.test(name);
+}
+
+const excludePatterns = values.exclude;
+
 const content = generateExterns({
     input: positionals.length === 1 ? positionals[0] : positionals,
     output: values.output,
     fileFilter: values.filter ? (f: string) => f.includes(values.filter as string) : undefined,
-    excludeDeclarations: values.exclude,
+    exclude: excludePatterns
+        ? (name: string) => excludePatterns.some(p => matchesPattern(name, p))
+        : undefined,
 });
 
 if (!values.output) {

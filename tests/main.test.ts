@@ -152,25 +152,116 @@ describe('generateExterns', () => {
     });
 
     describe('options', () => {
-        it('should support excludeDeclarations with exact match', () => {
+        it('should support exclude with exact match', () => {
             const content = generateExterns({
                 input: fixturePath,
-                excludeDeclarations: ['debugHelper'],
+                exclude: (name) => name === 'debugHelper',
             });
 
             expect(content).not.toContain('var debugHelper;');
             expect(content).toContain('var app;');
         });
 
-        it('should support excludeDeclarations with wildcard', () => {
+        it('should support exclude with variable and function kinds', () => {
             const content = generateExterns({
                 input: fixturePath,
-                excludeDeclarations: ['temp*', 'debug*'],
+                exclude: (name) => name.startsWith('temp') || name.startsWith('debug'),
             });
 
             expect(content).not.toContain('var tempVar;');
             expect(content).not.toContain('var debugHelper;');
             expect(content).toContain('var app;');
+        });
+
+        it('should exclude entire namespace when kind is namespace', () => {
+            const content = generateExterns({
+                input: fixturePath,
+                exclude: (name, { kind }) => kind === 'namespace' && name === 'AnotherLib',
+            });
+
+            // AnotherLib.Logger.error and AnotherLib.EventEmitter.off should be excluded
+            expect(content).not.toContain('Logger.prototype.error;');
+            expect(content).not.toContain('EventEmitter.prototype.off;');
+            // TestLib members should still exist
+            expect(content).toContain('Logger.prototype.log;');
+            expect(content).toContain('EventEmitter.prototype.on;');
+        });
+
+        it('should exclude specific interface by scope', () => {
+            const content = generateExterns({
+                input: fixturePath,
+                exclude: (name, { kind, scope }) =>
+                    kind === 'interface' && scope === 'AnotherLib' && name === 'Logger',
+            });
+
+            // AnotherLib.Logger excluded, but TestLib.Logger still merged
+            expect(content).toContain('Logger.prototype.log;');
+            expect(content).toContain('Logger.prototype.warn;');
+            expect(content).not.toContain('Logger.prototype.error;');
+        });
+
+        it('should exclude specific member by scope', () => {
+            const content = generateExterns({
+                input: fixturePath,
+                exclude: (name, { kind, scope }) =>
+                    kind === 'member' && scope === 'TestLib.Logger' && name === 'warn',
+            });
+
+            expect(content).toContain('Logger.prototype.log;');
+            expect(content).not.toContain('Logger.prototype.warn;');
+            // AnotherLib.Logger.error unaffected
+            expect(content).toContain('Logger.prototype.error;');
+        });
+
+        it('should exclude top-level interface by kind', () => {
+            const content = generateExterns({
+                input: fixturePath,
+                exclude: (name, { kind }) =>
+                    kind === 'interface' && name === 'TopPlugin',
+            });
+
+            expect(content).not.toContain('function TopPlugin() {}');
+            // plugin var still exists but without member expansion
+            expect(content).toContain('var plugin;');
+            expect(content).not.toContain('plugin.activate;');
+        });
+
+        it('should exclude top-level class by kind', () => {
+            const content = generateExterns({
+                input: fixturePath,
+                exclude: (name, { kind }) =>
+                    kind === 'class' && name === 'Timer',
+            });
+
+            expect(content).not.toContain('function Timer() {}');
+            expect(content).not.toContain('Timer.prototype.start;');
+        });
+
+        it('should exclude nested namespace by scope', () => {
+            const content = generateExterns({
+                input: fixturePath,
+                exclude: (name, { kind, scope }) =>
+                    kind === 'namespace' && scope === 'TestLib' && name === 'Inner',
+            });
+
+            expect(content).not.toContain('function Util() {}');
+            expect(content).not.toContain('Util.prototype.format;');
+            // Other TestLib members unaffected
+            expect(content).toContain('function Config() {}');
+        });
+
+        it('should exclude class inside namespace by scope', () => {
+            const content = generateExterns({
+                input: fixturePath,
+                exclude: (name, { kind, scope }) =>
+                    kind === 'class' && scope === 'TestLib' && name === 'EventEmitter',
+            });
+
+            // TestLib.EventEmitter excluded, but AnotherLib.EventEmitter still present
+            expect(content).toContain('function EventEmitter() {}');
+            expect(content).toContain('EventEmitter.prototype.off;');
+            expect(content).not.toContain('EventEmitter.prototype.on;');
+            expect(content).not.toContain('EventEmitter.prototype.emit;');
         });
 
         it('should use default fileFilter excluding typescript libs', () => {
