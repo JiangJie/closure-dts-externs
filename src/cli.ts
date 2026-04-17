@@ -36,7 +36,7 @@ if (values.help) {
 }
 
 if (positionals.length === 0) {
-    console.error('Error: at least one input path is required.\n');
+    console.error('Error: at least one .d.ts input path is required.\n');
     console.info(HELP);
     process.exit(1);
 }
