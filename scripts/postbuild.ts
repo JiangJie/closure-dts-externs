@@ -23,6 +23,6 @@ const { outputText } = ts.transpileModule(withoutShebang, {
 const cli = `#!/usr/bin/env node\n${outputText.replace(/from '\.\/main\.ts'/, "from '../dist/main.mjs'")}`;
 
 const binDir = resolve(rootDir, 'bin');
-rmSync(binDir, { recursive: true });
+rmSync(binDir, { recursive: true, force: true });
 mkdirSync(binDir, { recursive: true });
 writeFileSync(resolve(binDir, 'cli.mjs'), cli);
