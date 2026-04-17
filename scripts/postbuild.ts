@@ -1,8 +1,11 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import ts from 'typescript';
 
+const rootDir = resolve(import.meta.dirname, '..');
+
 // Transpile src/cli.ts → bin/cli.mjs
-const source = readFileSync('src/cli.ts', 'utf-8');
+const source = readFileSync(resolve(rootDir, 'src/cli.ts'), 'utf-8');
 
 // Strip the original shebang (will add back with node path)
 const withoutShebang = source.replace(/^#!.*\n/, '');
@@ -19,6 +22,7 @@ const { outputText } = ts.transpileModule(withoutShebang, {
 
 const cli = `#!/usr/bin/env node\n${outputText.replace(/from '\.\/main\.ts'/, "from '../dist/main.mjs'")}`;
 
-rmSync('bin', { recursive: true });
-mkdirSync('bin', { recursive: true });
-writeFileSync('bin/cli.mjs', cli);
+const binDir = resolve(rootDir, 'bin');
+rmSync(binDir, { recursive: true });
+mkdirSync(binDir, { recursive: true });
+writeFileSync(resolve(binDir, 'cli.mjs'), cli);
