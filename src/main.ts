@@ -6,23 +6,23 @@ import ts from 'typescript';
  */
 export interface GenerateExternsOptions {
     /**
-     * Path(s) to the `.d.ts` entry file(s).
+     * Path(s) to the `.d.ts` input file(s).
      *
      * @example
      * ```ts
-     * // Single entry
+     * // Single input
      * 'path/to/typings.d.ts'
-     * // Multiple entries
+     * // Multiple inputs
      * ['types/api.d.ts', 'types/cloud.d.ts']
      * ```
      */
-    dtsEntry: string | string[];
+    input: string | string[];
 
     /**
      * Path to write the generated externs file.
      * If omitted, the externs content is returned as a string without writing to disk.
      */
-    outputPath?: string;
+    output?: string;
 
     /**
      * Filter which source files to process.
@@ -196,16 +196,16 @@ const defaultFileFilter = (fileName: string): boolean => !fileName.includes('/ty
  * @example
  * ```ts
  * // Write to file
- * generateExterns({ dtsEntry: 'path/to/typings.d.ts', outputPath: 'externs.js' });
+ * generateExterns({ input: 'path/to/typings.d.ts', output: 'externs.js' });
  *
  * // Get as string
- * const content = generateExterns({ dtsEntry: 'path/to/typings.d.ts' });
+ * const content = generateExterns({ input: 'path/to/typings.d.ts' });
  * ```
  */
 export function generateExterns(options: GenerateExternsOptions): string {
     const {
-        dtsEntry,
-        outputPath,
+        input,
+        output,
         fileFilter = defaultFileFilter,
         excludeDeclarations = [],
     } = options;
@@ -215,9 +215,9 @@ export function generateExterns(options: GenerateExternsOptions): string {
     const globalFunctions = new Set<string>();
 
     const program = ts.createProgram({
-        rootNames: Array.isArray(dtsEntry) ? dtsEntry : [dtsEntry],
+        rootNames: Array.isArray(input) ? input : [input],
         options: {
-            // Prevent auto-inclusion of @types/* packages, only process dtsEntry and its explicit references
+            // Prevent auto-inclusion of @types/* packages, only process input and its explicit references
             types: [],
         },
     });
@@ -258,11 +258,11 @@ export function generateExterns(options: GenerateExternsOptions): string {
 
     const content = buildExternsContent(globalVars, globalFunctions, interfaceMembers);
 
-    if (outputPath) {
-        writeFileSync(outputPath, content);
+    if (output) {
+        writeFileSync(output, content);
 
         const totalMembers = [...interfaceMembers.values()].reduce((sum, m) => sum + m.size, 0);
-        console.info(`Generated ${outputPath}`);
+        console.info(`Generated ${output}`);
         console.info(`  global vars: ${globalVars.length}, global functions: ${globalFunctions.size}`);
         console.info(`  interface/class types: ${interfaceMembers.size}, total members: ${totalMembers}`);
     }

@@ -3,10 +3,10 @@
 import { parseArgs } from 'node:util';
 import { generateExterns } from './main.ts';
 
-const HELP = `Usage: closure-dts-externs <dtsEntry...> [options]
+const HELP = `Usage: closure-dts-externs <input...> [options]
 
 Arguments:
-  dtsEntry              Path(s) to .d.ts entry file(s)
+  input                 Path(s) to .d.ts input file(s)
 
 Options:
   -o, --output <path>   Write output to file (default: stdout)
@@ -36,14 +36,14 @@ if (values.help) {
 }
 
 if (positionals.length === 0) {
-    console.error('Error: at least one dtsEntry path is required.\n');
+    console.error('Error: at least one input path is required.\n');
     console.info(HELP);
     process.exit(1);
 }
 
 const content = generateExterns({
-    dtsEntry: positionals.length === 1 ? positionals[0] : positionals,
-    outputPath: values.output,
+    input: positionals.length === 1 ? positionals[0] : positionals,
+    output: values.output,
     fileFilter: values.filter ? (f: string) => f.includes(values.filter as string) : undefined,
     excludeDeclarations: values.exclude,
 });

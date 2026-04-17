@@ -7,20 +7,20 @@ const fixturePath = join('tests', 'fixtures', 'comprehensive.d.ts');
 
 describe('generateExterns', () => {
     it('should return externs content as string', () => {
-        const content = generateExterns({ dtsEntry: fixturePath });
+        const content = generateExterns({ input: fixturePath });
 
         expect(content).toBeTypeOf('string');
         expect(content.length).toBeGreaterThan(0);
     });
 
     it('should start with auto-generated comment', () => {
-        const content = generateExterns({ dtsEntry: fixturePath });
+        const content = generateExterns({ input: fixturePath });
 
         expect(content).toMatch(/^\/\/ Auto-generated/);
     });
 
     it('should contain auto-extracted global var declarations', () => {
-        const content = generateExterns({ dtsEntry: fixturePath });
+        const content = generateExterns({ input: fixturePath });
 
         expect(content).toContain('var app;');
         expect(content).toContain('var plugin;');
@@ -31,7 +31,7 @@ describe('generateExterns', () => {
     });
 
     it('should expand global object members from associated interface', () => {
-        const content = generateExterns({ dtsEntry: fixturePath });
+        const content = generateExterns({ input: fixturePath });
 
         // app → TestLib.App
         expect(content).toContain('app.init;');
@@ -44,7 +44,7 @@ describe('generateExterns', () => {
     });
 
     it('should not output prototype form for interfaces consumed by global vars', () => {
-        const content = generateExterns({ dtsEntry: fixturePath });
+        const content = generateExterns({ input: fixturePath });
 
         // App and TopPlugin are consumed by `app` and `plugin`
         expect(content).not.toContain('function App() {}');
@@ -52,7 +52,7 @@ describe('generateExterns', () => {
     });
 
     it('should output prototype form for unconsumed interfaces and classes', () => {
-        const content = generateExterns({ dtsEntry: fixturePath });
+        const content = generateExterns({ input: fixturePath });
 
         // Config and Logger are not referenced by any global var
         expect(content).toContain('function Config() {}');
@@ -76,7 +76,7 @@ describe('generateExterns', () => {
     });
 
     it('should recursively expand inline object type literals', () => {
-        const content = generateExterns({ dtsEntry: fixturePath });
+        const content = generateExterns({ input: fixturePath });
 
         // app.env: { DATA_PATH: string }
         expect(content).toContain('app.env;');
@@ -89,7 +89,7 @@ describe('generateExterns', () => {
     });
 
     it('should produce sorted output', () => {
-        const content = generateExterns({ dtsEntry: fixturePath });
+        const content = generateExterns({ input: fixturePath });
         const lines = content.split('\n');
 
         // Global variable declarations should be sorted
@@ -103,9 +103,9 @@ describe('generateExterns', () => {
         expect(appNames).toEqual([...appNames].sort());
     });
 
-    describe('outputPath', () => {
+    describe('output', () => {
         const tmpDir = join('tests', '.tmp');
-        const outputPath = join(tmpDir, 'externs.js');
+        const output = join(tmpDir, 'externs.js');
 
         beforeAll(() => {
             mkdirSync(tmpDir, { recursive: true });
@@ -115,14 +115,14 @@ describe('generateExterns', () => {
             rmSync(tmpDir, { recursive: true, force: true });
         });
 
-        it('should write to file and log info when outputPath is provided', () => {
+        it('should write to file and log info when output is provided', () => {
             const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
 
-            const content = generateExterns({ dtsEntry: fixturePath, outputPath });
+            const content = generateExterns({ input: fixturePath, output });
 
-            expect(existsSync(outputPath)).toBe(true);
-            expect(readFileSync(outputPath, 'utf-8')).toBe(content);
-            expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining(`Generated ${outputPath}`));
+            expect(existsSync(output)).toBe(true);
+            expect(readFileSync(output, 'utf-8')).toBe(content);
+            expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining(`Generated ${output}`));
 
             infoSpy.mockRestore();
         });
@@ -131,7 +131,7 @@ describe('generateExterns', () => {
     describe('options', () => {
         it('should support excludeDeclarations with exact match', () => {
             const content = generateExterns({
-                dtsEntry: fixturePath,
+                input: fixturePath,
                 excludeDeclarations: ['debugHelper'],
             });
 
@@ -141,7 +141,7 @@ describe('generateExterns', () => {
 
         it('should support excludeDeclarations with wildcard', () => {
             const content = generateExterns({
-                dtsEntry: fixturePath,
+                input: fixturePath,
                 excludeDeclarations: ['temp*', 'debug*'],
             });
 
@@ -151,14 +151,14 @@ describe('generateExterns', () => {
         });
 
         it('should use default fileFilter excluding typescript libs', () => {
-            const content = generateExterns({ dtsEntry: fixturePath });
+            const content = generateExterns({ input: fixturePath });
 
             expect(content).toBeTypeOf('string');
             expect(content.length).toBeGreaterThan(0);
         });
 
-        it('should support dtsEntry as string array', () => {
-            const content = generateExterns({ dtsEntry: [fixturePath] });
+        it('should support input as string array', () => {
+            const content = generateExterns({ input: [fixturePath] });
 
             expect(content).toContain('var app;');
             expect(content).toContain('app.init;');
@@ -184,7 +184,7 @@ declare namespace NS {
     class Named { namedMember: string; }
 }
 `);
-            const content = generateExterns({ dtsEntry: fixtureFile });
+            const content = generateExterns({ input: fixtureFile });
 
             expect(content).toContain('Named.prototype.namedMember;');
             expect(content).not.toContain('anonMember');
@@ -194,7 +194,7 @@ declare namespace NS {
             writeFileSync(fixtureFile, `
 declare function namedFn(): void;
 `);
-            const content = generateExterns({ dtsEntry: fixtureFile });
+            const content = generateExterns({ input: fixtureFile });
 
             expect(content).toContain('var namedFn;');
         });
@@ -203,7 +203,7 @@ declare function namedFn(): void;
             writeFileSync(fixtureFile, `
 declare const noType;
 `);
-            const content = generateExterns({ dtsEntry: fixtureFile });
+            const content = generateExterns({ input: fixtureFile });
 
             expect(content).toContain('var noType;');
         });
@@ -213,7 +213,7 @@ declare const noType;
 declare const shouldAppear: string;
 `);
             const content = generateExterns({
-                dtsEntry: fixtureFile,
+                input: fixtureFile,
                 fileFilter: f => f.includes('.fixtures'),
             });
 
@@ -223,7 +223,7 @@ declare const shouldAppear: string;
 
     describe('e2e snapshot', () => {
         it('should match the snapshot of comprehensive fixture output', () => {
-            const content = generateExterns({ dtsEntry: fixturePath });
+            const content = generateExterns({ input: fixturePath });
             const snapshot = readFileSync(join('tests', 'snapshots', 'comprehensive.snap.js'), 'utf-8');
 
             expect(content).toBe(snapshot);
