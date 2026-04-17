@@ -363,9 +363,8 @@ declare namespace NS {
     describe('e2e snapshot', () => {
         it('should match the snapshot of comprehensive fixture output', () => {
             const content = generate({ input: fixturePath });
-            const snapshot = readFileSync(join('tests', 'snapshots', 'comprehensive.snap.js'), 'utf-8');
 
-            expect(content).toBe(snapshot);
+            expect(content).toMatchSnapshot();
         });
     });
 });

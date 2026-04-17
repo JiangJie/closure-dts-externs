@@ -78,9 +78,11 @@ declare function shutdown(): void;
 declare function debugHelper(): void;
 declare const tempVar: string;
 
-// Cross-namespace same-name interface (members should be merged)
+// Cross-namespace same-name interface/class (members should be merged, duplicates deduplicated)
 declare namespace AnotherLib {
     interface Logger {
+        // same as TestLib.Logger.log, should be deduplicated
+        log(msg: string): void;
         error(msg: string): void;
     }
 

@@ -37,6 +37,7 @@
     "build": "pnpm exec vite build && node scripts/postbuild.ts",
     "test": "pnpm exec vitest run --coverage",
     "test:watch": "pnpm exec vitest",
+    "test:update": "pnpm exec vitest run --update",
     "prepublishOnly": "pnpm run build"
   },
   "repository": {
