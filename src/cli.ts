@@ -45,7 +45,9 @@ function matchesPattern(name: string, pattern: string): boolean {
     if (!pattern.includes('*')) {
         return name === pattern;
     }
-    const regex = new RegExp(`^${pattern.replace(/\*/g, '.*')}$`);
+    // Escape regex metacharacters first to prevent injection, then restore * as .* wildcard
+    const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`^${escaped.replace(/\\\*/g, '.*')}$`);
     return regex.test(name);
 }
 

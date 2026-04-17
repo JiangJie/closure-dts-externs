@@ -13,6 +13,7 @@ const { outputText } = ts.transpileModule(withoutShebang, {
         target: ts.ScriptTarget.ESNext,
         module: ts.ModuleKind.ESNext,
         verbatimModuleSyntax: false,
+        removeComments: true,
     },
 });
 
