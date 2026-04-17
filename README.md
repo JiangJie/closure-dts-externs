@@ -2,7 +2,9 @@
 
 [![License](https://img.shields.io/npm/l/closure-dts-externs.svg)](LICENSE)
 [![Build Status](https://github.com/JiangJie/closure-dts-externs/actions/workflows/test.yml/badge.svg)](https://github.com/JiangJie/closure-dts-externs/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/JiangJie/closure-dts-externs/graph/badge.svg)](https://codecov.io/gh/JiangJie/closure-dts-externs)
 [![NPM version](https://img.shields.io/npm/v/closure-dts-externs.svg)](https://npmjs.org/package/closure-dts-externs)
+[![NPM downloads](https://badgen.net/npm/dm/closure-dts-externs)](https://npmjs.org/package/closure-dts-externs)
 
 Generate [Closure Compiler](https://github.com/google/closure-compiler) externs from `.d.ts` type definitions.
 
