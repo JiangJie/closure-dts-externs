@@ -12,7 +12,7 @@
   "module": "dist/main.mjs",
   "types": "dist/main.d.ts",
   "bin": {
-    "closure-dts-externs": "dist/cli.mjs"
+    "closure-dts-externs": "bin/cli.mjs"
   },
   "exports": {
     ".": {
@@ -27,6 +27,7 @@
     "LICENSE",
     "README.md",
     "CHANGELOG.md",
+    "bin",
     "dist"
   ],
   "sideEffects": false,
