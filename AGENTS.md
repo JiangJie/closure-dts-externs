@@ -63,7 +63,6 @@ src/
 - `dtsEntry` (required): path to the `.d.ts` entry file
 - `outputPath` (optional): write to file; if omitted returns content as string
 - `fileFilter` (optional): filter which source files to process; defaults to excluding TypeScript built-in libs
-- `extraGlobalVars` (optional): extra global variable names to include in the output
 - `excludeGlobals` (optional): global declaration names to exclude, supports `*` wildcards
 
 ### How It Works

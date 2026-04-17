@@ -150,15 +150,6 @@ describe('generateExterns', () => {
             expect(content).toContain('var app;');
         });
 
-        it('should support extraGlobalVars', () => {
-            const content = generateExterns({
-                dtsEntry: fixturePath,
-                extraGlobalVars: ['myCustomGlobal'],
-            });
-
-            expect(content).toContain('var myCustomGlobal;');
-        });
-
         it('should use default fileFilter excluding typescript libs', () => {
             const content = generateExterns({ dtsEntry: fixturePath });
 
