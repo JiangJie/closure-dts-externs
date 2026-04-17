@@ -75,6 +75,18 @@ describe('generateExterns', () => {
         expect(content).toContain('Timer.prototype.stop;');
     });
 
+    it('should merge same-name interfaces across different namespaces', () => {
+        const content = generateExterns({ input: fixturePath });
+
+        // Logger exists in both TestLib and AnotherLib — members should be merged
+        expect(content).toContain('function Logger() {}');
+        expect(content).toContain('Logger.prototype.log;');
+        expect(content).toContain('Logger.prototype.warn;');
+        expect(content).toContain('Logger.prototype.error;');
+        // Only one function declaration
+        expect(content.match(/function Logger\(\)/g)?.length).toBe(1);
+    });
+
     it('should recursively expand inline object type literals', () => {
         const content = generateExterns({ input: fixturePath });
 

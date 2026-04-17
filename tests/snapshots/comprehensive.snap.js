@@ -30,6 +30,7 @@ EventEmitter.prototype.emit;
 EventEmitter.prototype.on;
 
 function Logger() {}
+Logger.prototype.error;
 Logger.prototype.log;
 Logger.prototype.warn;
 

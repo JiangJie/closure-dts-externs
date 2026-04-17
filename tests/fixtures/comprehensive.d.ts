@@ -78,6 +78,13 @@ declare function shutdown(): void;
 declare function debugHelper(): void;
 declare const tempVar: string;
 
+// Cross-namespace same-name interface (members should be merged)
+declare namespace AnotherLib {
+    interface Logger {
+        error(msg: string): void;
+    }
+}
+
 // Top-level class (not in namespace)
 declare class Timer {
     start(): void;
