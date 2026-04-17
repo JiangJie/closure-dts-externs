@@ -3,7 +3,7 @@
   "description": "Generate Closure Compiler externs from .d.ts type definitions.",
   "author": "jiang115jie@gmail.com",
   "license": "MIT",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "engines": {
     "node": ">=18"
