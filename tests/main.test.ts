@@ -129,20 +129,20 @@ describe('generateExterns', () => {
     });
 
     describe('options', () => {
-        it('should support excludeGlobals with exact match', () => {
+        it('should support excludeDeclarations with exact match', () => {
             const content = generateExterns({
                 dtsEntry: fixturePath,
-                excludeGlobals: ['debugHelper'],
+                excludeDeclarations: ['debugHelper'],
             });
 
             expect(content).not.toContain('var debugHelper;');
             expect(content).toContain('var app;');
         });
 
-        it('should support excludeGlobals with wildcard', () => {
+        it('should support excludeDeclarations with wildcard', () => {
             const content = generateExterns({
                 dtsEntry: fixturePath,
-                excludeGlobals: ['temp*', 'debug*'],
+                excludeDeclarations: ['temp*', 'debug*'],
             });
 
             expect(content).not.toContain('var tempVar;');

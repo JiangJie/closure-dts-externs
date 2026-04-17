@@ -37,15 +37,16 @@ export interface GenerateExternsOptions {
     fileFilter?: (fileName: string) => boolean;
 
     /**
-     * Global declaration names to exclude from output.
+     * Declaration names to exclude from output.
+     * Applies to `declare const/var/let` and `declare function`.
      * Supports simple wildcard patterns with `*`.
      *
      * @example
      * ```ts
-     * excludeGlobals: ['console', 'set*', 'clear*', 'require', 'module', 'exports']
+     * excludeDeclarations: ['console', 'set*', 'clear*', 'require', 'module', 'exports']
      * ```
      */
-    excludeGlobals?: string[];
+    excludeDeclarations?: string[];
 }
 
 function getNodeName(node: ts.Node): string | undefined {
@@ -121,8 +122,8 @@ function matchesPattern(name: string, pattern: string): boolean {
     return regex.test(name);
 }
 
-function isExcluded(name: string, excludeGlobals: string[]): boolean {
-    return excludeGlobals.some(pattern => matchesPattern(name, pattern));
+function isExcluded(name: string, excludeDeclarations: string[]): boolean {
+    return excludeDeclarations.some(pattern => matchesPattern(name, pattern));
 }
 
 interface GlobalVarInfo {
@@ -206,7 +207,7 @@ export function generateExterns(options: GenerateExternsOptions): string {
         dtsEntry,
         outputPath,
         fileFilter = defaultFileFilter,
-        excludeGlobals = [],
+        excludeDeclarations = [],
     } = options;
 
     const interfaceMembers = new Map<string, Set<string>>();
@@ -230,13 +231,13 @@ export function generateExterns(options: GenerateExternsOptions): string {
                 // declare const/var/let xxx: Type
                 for (const decl of node.declarationList.declarations) {
                     const varName = getNodeName(decl);
-                    if (!varName || isExcluded(varName, excludeGlobals)) continue;
+                    if (!varName || isExcluded(varName, excludeDeclarations)) continue;
                     const typeName = decl.type ? resolveTypeName(decl.type) : undefined;
                     globalVars.push({ varName, typeName });
                 }
             } else if (ts.isFunctionDeclaration(node) && node.name) {
                 const fnName = getNodeName(node);
-                if (fnName && !isExcluded(fnName, excludeGlobals)) {
+                if (fnName && !isExcluded(fnName, excludeDeclarations)) {
                     globalFunctions.add(fnName);
                 }
             } else if (ts.isInterfaceDeclaration(node)) {

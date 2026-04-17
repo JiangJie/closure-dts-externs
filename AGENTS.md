@@ -63,7 +63,7 @@ src/
 - `dtsEntry` (required): path to the `.d.ts` entry file
 - `outputPath` (optional): write to file; if omitted returns content as string
 - `fileFilter` (optional): filter which source files to process; defaults to excluding TypeScript built-in libs
-- `excludeGlobals` (optional): global declaration names to exclude, supports `*` wildcards
+- `excludeDeclarations` (optional): declaration names to exclude, supports `*` wildcards
 
 ### How It Works
 
@@ -90,7 +90,7 @@ import { generateExterns } from 'closure-dts-externs';
 const content = generateExterns({
     dtsEntry: 'node_modules/my-typings/types/index.d.ts',
     fileFilter: (f) => f.includes('my-typings'),
-    excludeGlobals: ['console', 'require', 'module', 'exports', 'set*', 'clear*'],
+    excludeDeclarations: ['console', 'require', 'module', 'exports', 'set*', 'clear*'],
     outputPath: 'externs.js',
 });
 

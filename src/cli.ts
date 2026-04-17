@@ -11,21 +11,19 @@ Arguments:
 Options:
   -o, --output <path>   Write output to file (default: stdout)
   --filter <substring>  Only process files whose path contains <substring>
-  --extra <name>        Extra global variable name (repeatable)
-  --exclude <pattern>   Exclude global declarations matching pattern, supports * wildcards (repeatable)
+  --exclude <pattern>   Exclude declarations matching pattern, supports * wildcards (repeatable)
   -h, --help            Show this help message
 
 Examples:
   closure-dts-externs types/index.d.ts -o externs.js
   closure-dts-externs types/index.d.ts --filter my-typings --exclude "set*" --exclude "clear*"
-  closure-dts-externs api.d.ts cloud.d.ts -o externs.js --extra GameGlobal`;
+  closure-dts-externs api.d.ts cloud.d.ts -o externs.js`;
 
 const { values, positionals } = parseArgs({
     args: process.argv.slice(2),
     options: {
         output: { type: 'string', short: 'o' },
         filter: { type: 'string' },
-        extra: { type: 'string', multiple: true },
         exclude: { type: 'string', multiple: true },
         help: { type: 'boolean', short: 'h' },
     },
@@ -47,8 +45,7 @@ const content = generateExterns({
     dtsEntry: positionals.length === 1 ? positionals[0] : positionals,
     outputPath: values.output,
     fileFilter: values.filter ? (f: string) => f.includes(values.filter as string) : undefined,
-    extraGlobalVars: values.extra,
-    excludeGlobals: values.exclude,
+    excludeDeclarations: values.exclude,
 });
 
 if (!values.output) {
