@@ -6,9 +6,11 @@
 [![NPM version](https://img.shields.io/npm/v/closure-dts-externs.svg)](https://npmjs.org/package/closure-dts-externs)
 [![NPM downloads](https://badgen.net/npm/dm/closure-dts-externs)](https://npmjs.org/package/closure-dts-externs)
 
-Generate [Closure Compiler](https://github.com/google/closure-compiler) externs from `.d.ts` type definitions.
+Generate Closure Compiler externs from `.d.ts` type definitions.
 
 ---
+
+[Closure Compiler](https://github.com/google/closure-compiler) requires **externs** files to prevent property renaming for external APIs. Writing them by hand is tedious and error-prone — `closure-dts-externs` automates this by converting existing TypeScript `.d.ts` type definitions directly into valid externs, so your type definitions and externs never go out of sync.
 
 Parses `.d.ts` files using the TypeScript compiler API and outputs externs declarations for:
 
@@ -26,6 +28,9 @@ npm install closure-dts-externs -D
 
 # pnpm
 pnpm add closure-dts-externs -D
+
+# yarn
+yarn add closure-dts-externs -D
 ```
 
 ## Quick Start
@@ -64,6 +69,16 @@ function Logger() {}
 Logger.prototype.log;
 Logger.prototype.warn;
 ```
+
+The output can be passed directly to Closure Compiler via the `--externs` flag:
+
+```bash
+npx google-closure-compiler --externs externs.js --js your_code.js --js_output_file output.js
+```
+
+Global variables typed with an interface get their members expanded directly (e.g. `wx.request`). Interfaces not associated with a global variable are emitted as `function Name() {}` with `Name.prototype.*` members, matching Closure Compiler's [convention for extern types](https://github.com/google/closure-compiler/wiki/Annotating-JavaScript-for-the-Closure-Compiler#externs).
+
+> Same-name interfaces/classes from different namespaces are **merged** into one declaration (Closure externs is a flat global namespace), with duplicate members deduplicated.
 
 ## CLI
 
@@ -150,8 +165,6 @@ exclude: (name, { kind, scope }) =>
    - Global variable declarations (`var xxx;`)
    - Global object members (`xxx.member;`)
    - Remaining interface/class prototypes (`function Name() {}` / `Name.prototype.member;`)
-
-> Same-name interfaces/classes from different namespaces are **merged** into one declaration (Closure externs is a flat global namespace), with duplicate members deduplicated.
 
 ## License
 
