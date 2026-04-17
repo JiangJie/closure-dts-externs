@@ -109,7 +109,15 @@ function visitNamespace(nsDecl: ts.ModuleDeclaration, interfaceMembers: Map<stri
         } else if (ts.isClassDeclaration(child)) {
             const name = child.name?.text;
             if (!name) return;
-            interfaceMembers.set(name, collectMembers(child));
+            const existing = interfaceMembers.get(name);
+            const members = collectMembers(child);
+            if (existing) {
+                for (const m of members) {
+                    existing.add(m);
+                }
+            } else {
+                interfaceMembers.set(name, members);
+            }
         }
     });
 }
@@ -251,7 +259,15 @@ export function generateExterns(options: GenerateExternsOptions): string {
                     interfaceMembers.set(node.name.text, members);
                 }
             } else if (ts.isClassDeclaration(node) && node.name) {
-                interfaceMembers.set(node.name.text, collectMembers(node));
+                const existing = interfaceMembers.get(node.name.text);
+                const members = collectMembers(node);
+                if (existing) {
+                    for (const m of members) {
+                        existing.add(m);
+                    }
+                } else {
+                    interfaceMembers.set(node.name.text, members);
+                }
             }
         });
     }

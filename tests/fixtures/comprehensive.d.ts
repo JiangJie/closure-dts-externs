@@ -83,6 +83,10 @@ declare namespace AnotherLib {
     interface Logger {
         error(msg: string): void;
     }
+
+    class EventEmitter {
+        off(event: string): void;
+    }
 }
 
 // Top-level class (not in namespace)

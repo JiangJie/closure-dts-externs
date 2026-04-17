@@ -27,6 +27,7 @@ Config.prototype.options.verbose;
 
 function EventEmitter() {}
 EventEmitter.prototype.emit;
+EventEmitter.prototype.off;
 EventEmitter.prototype.on;
 
 function Logger() {}

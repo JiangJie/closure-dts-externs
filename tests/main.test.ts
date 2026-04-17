@@ -87,6 +87,17 @@ describe('generateExterns', () => {
         expect(content.match(/function Logger\(\)/g)?.length).toBe(1);
     });
 
+    it('should merge same-name classes across different namespaces', () => {
+        const content = generateExterns({ input: fixturePath });
+
+        // EventEmitter exists in both TestLib and AnotherLib — members should be merged
+        expect(content).toContain('function EventEmitter() {}');
+        expect(content).toContain('EventEmitter.prototype.on;');
+        expect(content).toContain('EventEmitter.prototype.emit;');
+        expect(content).toContain('EventEmitter.prototype.off;');
+        expect(content.match(/function EventEmitter\(\)/g)?.length).toBe(1);
+    });
+
     it('should recursively expand inline object type literals', () => {
         const content = generateExterns({ input: fixturePath });
 
@@ -230,6 +241,19 @@ declare const shouldAppear: string;
             });
 
             expect(content).toContain('var shouldAppear;');
+        });
+
+        it('should merge same-name top-level classes', () => {
+            writeFileSync(fixtureFile, `
+declare class Widget { render(): void; }
+declare class Widget { dispose(): void; }
+`);
+            const content = generateExterns({ input: fixtureFile });
+
+            expect(content).toContain('function Widget() {}');
+            expect(content).toContain('Widget.prototype.render;');
+            expect(content).toContain('Widget.prototype.dispose;');
+            expect(content.match(/function Widget\(\)/g)?.length).toBe(1);
         });
     });
 
