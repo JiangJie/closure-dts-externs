@@ -83,7 +83,6 @@ describe('generate', () => {
         expect(content).toContain('Logger.prototype.log;');
         expect(content).toContain('Logger.prototype.warn;');
         expect(content).toContain('Logger.prototype.error;');
-        // Only one function declaration
         expect(content.match(/function Logger\(\)/g)?.length).toBe(1);
     });
 
@@ -354,6 +353,10 @@ declare namespace NS {
             expect(content).toContain('Hybrid.prototype.fromInterface;');
             expect(content).toContain('Hybrid.prototype.fromClass;');
             expect(content.match(/function Hybrid\(\)/g)?.length).toBe(1);
+        });
+
+        it('should throw when input is an empty array', () => {
+            expect(() => generate({ input: [] })).toThrow('`input` must contain at least one .d.ts file path');
         });
     });
 

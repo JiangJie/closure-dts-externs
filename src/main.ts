@@ -3,6 +3,8 @@ import ts from 'typescript';
 
 /**
  * Context passed to the `exclude` filter callback.
+ *
+ * @since 0.1.0
  */
 export interface ExcludeContext {
     /** The kind of declaration being visited. */
@@ -24,6 +26,8 @@ export interface ExcludeContext {
 
 /**
  * Options for generating Closure Compiler externs.
+ *
+ * @since 0.1.0
  */
 export interface GenerateOptions {
     /**
@@ -97,7 +101,7 @@ function collectMembers(node: ts.Node, prefix: string, scope: string, filter?: E
         if (filter?.(memberName, { kind: 'member', scope })) return;
         const path = prefix ? `${prefix}.${memberName}` : memberName;
         members.add(path);
-        // Recursively expand inline object type literals (e.g. `env: { USER_DATA_PATH: string }`)
+        // Closure Compiler needs each nested property explicitly declared as extern
         if ((ts.isPropertySignature(child) || ts.isPropertyDeclaration(child)) && child.type && ts.isTypeLiteralNode(child.type)) {
             for (const nested of collectMembers(child.type, path, `${scope}.${memberName}`, filter)) {
                 members.add(nested);
@@ -107,17 +111,12 @@ function collectMembers(node: ts.Node, prefix: string, scope: string, filter?: E
     return members;
 }
 
-/**
- * Resolve the type name from a type annotation like `SomeNamespace.TypeName` or `TypeName`.
- */
 function resolveTypeName(typeNode: ts.TypeNode): string | undefined {
     if (ts.isTypeReferenceNode(typeNode)) {
         const typeName = typeNode.typeName;
         if (ts.isQualifiedName(typeName)) {
-            // e.g. WechatMinigame.Wx → 'Wx'
             return typeName.right.text;
         }
-        // typeName is Identifier (e.g. `declare const x: Foo`)
         return (typeName as ts.Identifier).text;
     }
     return undefined;
@@ -176,12 +175,13 @@ function buildExternsContent(
         '',
     ];
 
-    // Associate global variables with their interface members
+    // Consumed interfaces won't be emitted as standalone prototypes
+    const consumed = new Set<string>();
     const globalObjectMembers = new Map<string, Set<string>>();
     for (const { varName, typeName } of globalVars) {
         if (typeName && interfaceMembers.has(typeName)) {
             globalObjectMembers.set(varName, interfaceMembers.get(typeName) as Set<string>);
-            interfaceMembers.delete(typeName);
+            consumed.add(typeName);
         }
     }
 
@@ -209,8 +209,9 @@ function buildExternsContent(
     }
 
     // 3. Remaining interface/class prototype declarations
-    if (interfaceMembers.size > 0) {
-        const sorted = [...interfaceMembers].sort(([a], [b]) => a.localeCompare(b));
+    const remaining = [...interfaceMembers].filter(([name]) => !consumed.has(name));
+    if (remaining.length > 0) {
+        const sorted = remaining.sort(([a], [b]) => a.localeCompare(b));
         for (const [ifaceName, members] of sorted) {
             lines.push(`function ${ifaceName}() {}`);
             for (const member of [...members].sort()) {
@@ -236,6 +237,8 @@ const defaultFileFilter = (filePath: string): boolean => !filePath.includes('/ty
  * // Get as string
  * const content = generate({ input: 'path/to/typings.d.ts' });
  * ```
+ *
+ * @since 0.1.0
  */
 export function generate(options: GenerateOptions): string {
     const {
@@ -249,8 +252,13 @@ export function generate(options: GenerateOptions): string {
     const globalVars: GlobalVarInfo[] = [];
     const globalFunctions = new Set<string>();
 
+    const rootNames = Array.isArray(input) ? input : [input];
+    if (rootNames.length === 0) {
+        throw new Error('`input` must contain at least one .d.ts file path');
+    }
+
     const program = ts.createProgram({
-        rootNames: Array.isArray(input) ? input : [input],
+        rootNames,
         options: {
             // Prevent auto-inclusion of @types/* packages, only process input and its explicit references
             types: [],
