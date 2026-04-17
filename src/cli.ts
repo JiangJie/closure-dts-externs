@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { parseArgs } from 'node:util';
-import { generateExterns } from './main.ts';
+import { generate } from './main.ts';
 
 const HELP = `Usage: closure-dts-externs <input...> [options]
 
@@ -51,7 +51,7 @@ function matchesPattern(name: string, pattern: string): boolean {
 
 const excludePatterns = values.exclude;
 
-const content = generateExterns({
+const content = generate({
     input: positionals.length === 1 ? positionals[0] : positionals,
     output: values.output,
     fileFilter: values.filter

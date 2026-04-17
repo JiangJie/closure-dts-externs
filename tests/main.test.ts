@@ -1,26 +1,26 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { generateExterns } from '../src/main.ts';
+import { generate } from '../src/main.ts';
 
 const fixturePath = join('tests', 'fixtures', 'comprehensive.d.ts');
 
-describe('generateExterns', () => {
+describe('generate', () => {
     it('should return externs content as string', () => {
-        const content = generateExterns({ input: fixturePath });
+        const content = generate({ input: fixturePath });
 
         expect(content).toBeTypeOf('string');
         expect(content.length).toBeGreaterThan(0);
     });
 
     it('should start with auto-generated comment', () => {
-        const content = generateExterns({ input: fixturePath });
+        const content = generate({ input: fixturePath });
 
         expect(content).toMatch(/^\/\/ Auto-generated/);
     });
 
     it('should contain auto-extracted global var declarations', () => {
-        const content = generateExterns({ input: fixturePath });
+        const content = generate({ input: fixturePath });
 
         expect(content).toContain('var app;');
         expect(content).toContain('var plugin;');
@@ -31,7 +31,7 @@ describe('generateExterns', () => {
     });
 
     it('should expand global object members from associated interface', () => {
-        const content = generateExterns({ input: fixturePath });
+        const content = generate({ input: fixturePath });
 
         // app → TestLib.App
         expect(content).toContain('app.init;');
@@ -44,7 +44,7 @@ describe('generateExterns', () => {
     });
 
     it('should not output prototype form for interfaces consumed by global vars', () => {
-        const content = generateExterns({ input: fixturePath });
+        const content = generate({ input: fixturePath });
 
         // App and TopPlugin are consumed by `app` and `plugin`
         expect(content).not.toContain('function App() {}');
@@ -52,7 +52,7 @@ describe('generateExterns', () => {
     });
 
     it('should output prototype form for unconsumed interfaces and classes', () => {
-        const content = generateExterns({ input: fixturePath });
+        const content = generate({ input: fixturePath });
 
         // Config and Logger are not referenced by any global var
         expect(content).toContain('function Config() {}');
@@ -76,7 +76,7 @@ describe('generateExterns', () => {
     });
 
     it('should merge same-name interfaces across different namespaces', () => {
-        const content = generateExterns({ input: fixturePath });
+        const content = generate({ input: fixturePath });
 
         // Logger exists in both TestLib and AnotherLib — members should be merged
         expect(content).toContain('function Logger() {}');
@@ -88,7 +88,7 @@ describe('generateExterns', () => {
     });
 
     it('should merge same-name classes across different namespaces', () => {
-        const content = generateExterns({ input: fixturePath });
+        const content = generate({ input: fixturePath });
 
         // EventEmitter exists in both TestLib and AnotherLib — members should be merged
         expect(content).toContain('function EventEmitter() {}');
@@ -99,7 +99,7 @@ describe('generateExterns', () => {
     });
 
     it('should recursively expand inline object type literals', () => {
-        const content = generateExterns({ input: fixturePath });
+        const content = generate({ input: fixturePath });
 
         // app.env: { DATA_PATH: string }
         expect(content).toContain('app.env;');
@@ -112,7 +112,7 @@ describe('generateExterns', () => {
     });
 
     it('should produce sorted output', () => {
-        const content = generateExterns({ input: fixturePath });
+        const content = generate({ input: fixturePath });
         const lines = content.split('\n');
 
         // Global variable declarations should be sorted
@@ -141,7 +141,7 @@ describe('generateExterns', () => {
         it('should write to file and log info when output is provided', () => {
             const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
 
-            const content = generateExterns({ input: fixturePath, output });
+            const content = generate({ input: fixturePath, output });
 
             expect(existsSync(output)).toBe(true);
             expect(readFileSync(output, 'utf-8')).toBe(content);
@@ -153,7 +153,7 @@ describe('generateExterns', () => {
 
     describe('options', () => {
         it('should support exclude with exact match', () => {
-            const content = generateExterns({
+            const content = generate({
                 input: fixturePath,
                 exclude: (name) => name === 'debugHelper',
             });
@@ -163,7 +163,7 @@ describe('generateExterns', () => {
         });
 
         it('should support exclude with variable and function kinds', () => {
-            const content = generateExterns({
+            const content = generate({
                 input: fixturePath,
                 exclude: (name) => name.startsWith('temp') || name.startsWith('debug'),
             });
@@ -174,7 +174,7 @@ describe('generateExterns', () => {
         });
 
         it('should exclude entire namespace when kind is namespace', () => {
-            const content = generateExterns({
+            const content = generate({
                 input: fixturePath,
                 exclude: (name, { kind }) => kind === 'namespace' && name === 'AnotherLib',
             });
@@ -188,7 +188,7 @@ describe('generateExterns', () => {
         });
 
         it('should exclude specific interface by scope', () => {
-            const content = generateExterns({
+            const content = generate({
                 input: fixturePath,
                 exclude: (name, { kind, scope }) =>
                     kind === 'interface' && scope === 'AnotherLib' && name === 'Logger',
@@ -201,7 +201,7 @@ describe('generateExterns', () => {
         });
 
         it('should exclude specific member by scope', () => {
-            const content = generateExterns({
+            const content = generate({
                 input: fixturePath,
                 exclude: (name, { kind, scope }) =>
                     kind === 'member' && scope === 'TestLib.Logger' && name === 'warn',
@@ -214,7 +214,7 @@ describe('generateExterns', () => {
         });
 
         it('should exclude top-level interface by kind', () => {
-            const content = generateExterns({
+            const content = generate({
                 input: fixturePath,
                 exclude: (name, { kind }) =>
                     kind === 'interface' && name === 'TopPlugin',
@@ -227,7 +227,7 @@ describe('generateExterns', () => {
         });
 
         it('should exclude top-level class by kind', () => {
-            const content = generateExterns({
+            const content = generate({
                 input: fixturePath,
                 exclude: (name, { kind }) =>
                     kind === 'class' && name === 'Timer',
@@ -238,7 +238,7 @@ describe('generateExterns', () => {
         });
 
         it('should exclude nested namespace by scope', () => {
-            const content = generateExterns({
+            const content = generate({
                 input: fixturePath,
                 exclude: (name, { kind, scope }) =>
                     kind === 'namespace' && scope === 'TestLib' && name === 'Inner',
@@ -251,7 +251,7 @@ describe('generateExterns', () => {
         });
 
         it('should exclude class inside namespace by scope', () => {
-            const content = generateExterns({
+            const content = generate({
                 input: fixturePath,
                 exclude: (name, { kind, scope }) =>
                     kind === 'class' && scope === 'TestLib' && name === 'EventEmitter',
@@ -265,14 +265,14 @@ describe('generateExterns', () => {
         });
 
         it('should use default fileFilter excluding typescript libs', () => {
-            const content = generateExterns({ input: fixturePath });
+            const content = generate({ input: fixturePath });
 
             expect(content).toBeTypeOf('string');
             expect(content.length).toBeGreaterThan(0);
         });
 
         it('should support input as string array', () => {
-            const content = generateExterns({ input: [fixturePath] });
+            const content = generate({ input: [fixturePath] });
 
             expect(content).toContain('var app;');
             expect(content).toContain('app.init;');
@@ -298,7 +298,7 @@ declare namespace NS {
     class Named { namedMember: string; }
 }
 `);
-            const content = generateExterns({ input: fixtureFile });
+            const content = generate({ input: fixtureFile });
 
             expect(content).toContain('Named.prototype.namedMember;');
             expect(content).not.toContain('anonMember');
@@ -308,7 +308,7 @@ declare namespace NS {
             writeFileSync(fixtureFile, `
 declare function namedFn(): void;
 `);
-            const content = generateExterns({ input: fixtureFile });
+            const content = generate({ input: fixtureFile });
 
             expect(content).toContain('var namedFn;');
         });
@@ -317,7 +317,7 @@ declare function namedFn(): void;
             writeFileSync(fixtureFile, `
 declare const noType;
 `);
-            const content = generateExterns({ input: fixtureFile });
+            const content = generate({ input: fixtureFile });
 
             expect(content).toContain('var noType;');
         });
@@ -326,7 +326,7 @@ declare const noType;
             writeFileSync(fixtureFile, `
 declare const shouldAppear: string;
 `);
-            const content = generateExterns({
+            const content = generate({
                 input: fixtureFile,
                 fileFilter: f => f.includes('.fixtures'),
             });
@@ -339,7 +339,7 @@ declare const shouldAppear: string;
 declare class Widget { render(): void; }
 declare class Widget { dispose(): void; }
 `);
-            const content = generateExterns({ input: fixtureFile });
+            const content = generate({ input: fixtureFile });
 
             expect(content).toContain('function Widget() {}');
             expect(content).toContain('Widget.prototype.render;');
@@ -353,7 +353,7 @@ declare namespace NS {
     class Hybrid { fromClass(): void; }
 }
 `);
-            const content = generateExterns({ input: fixtureFile });
+            const content = generate({ input: fixtureFile });
 
             expect(content).toContain('function Hybrid() {}');
             expect(content).toContain('Hybrid.prototype.fromInterface;');
@@ -364,7 +364,7 @@ declare namespace NS {
 
     describe('e2e snapshot', () => {
         it('should match the snapshot of comprehensive fixture output', () => {
-            const content = generateExterns({ input: fixturePath });
+            const content = generate({ input: fixturePath });
             const snapshot = readFileSync(join('tests', 'snapshots', 'comprehensive.snap.js'), 'utf-8');
 
             expect(content).toBe(snapshot);

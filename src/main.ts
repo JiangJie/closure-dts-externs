@@ -25,7 +25,7 @@ export interface ExcludeContext {
 /**
  * Options for generating Closure Compiler externs.
  */
-export interface GenerateExternsOptions {
+export interface GenerateOptions {
     /**
      * Path(s) to the `.d.ts` input file(s).
      *
@@ -231,13 +231,13 @@ const defaultFileFilter = (filePath: string): boolean => !filePath.includes('/ty
  * @example
  * ```ts
  * // Write to file
- * generateExterns({ input: 'path/to/typings.d.ts', output: 'externs.js' });
+ * generate({ input: 'path/to/typings.d.ts', output: 'externs.js' });
  *
  * // Get as string
- * const content = generateExterns({ input: 'path/to/typings.d.ts' });
+ * const content = generate({ input: 'path/to/typings.d.ts' });
  * ```
  */
-export function generateExterns(options: GenerateExternsOptions): string {
+export function generate(options: GenerateOptions): string {
     const {
         input,
         output,

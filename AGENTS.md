@@ -53,13 +53,13 @@ External dependencies (`typescript`, `node:fs`) are NOT bundled.
 
 ```
 src/
-├── main.ts   # Core logic: generateExterns() and AST traversal helpers, also the public API entry
+├── main.ts   # Core logic: generate() and AST traversal helpers, also the public API entry
 └── cli.ts    # CLI entry with #!/usr/bin/env node shebang
 ```
 
 ### Key Function
 
-`generateExterns(options)` accepts:
+`generate(options)` accepts:
 - `input` (required): path(s) to the `.d.ts` file(s)
 - `output` (optional): write to file; if omitted returns content as string
 - `fileFilter` (optional): filter which source files to process; defaults to excluding TypeScript built-in libs
@@ -84,10 +84,10 @@ src/
 ### Example Usage
 
 ```ts
-import { generateExterns } from 'closure-dts-externs';
+import { generate } from 'closure-dts-externs';
 
 // Generate externs with filtering and exclusions
-const content = generateExterns({
+const content = generate({
     input: 'node_modules/my-typings/types/index.d.ts',
     fileFilter: (f) => f.includes('my-typings'),
     exclude: (name) =>
@@ -97,7 +97,7 @@ const content = generateExterns({
 });
 
 // Any .d.ts file
-const externs = generateExterns({ input: 'path/to/typings.d.ts' });
+const externs = generate({ input: 'path/to/typings.d.ts' });
 ```
 
 ## Testing
@@ -120,7 +120,7 @@ const externs = generateExterns({ input: 'path/to/typings.d.ts' });
 ## Publishing
 
 Published to **npm** as both:
-- A library (`import { generateExterns } from 'closure-dts-externs'`)
+- A library (`import { generate } from 'closure-dts-externs'`)
 - A CLI tool (`npx closure-dts-externs [dtsEntry] [outputPath]`)
 
 ## Code Style
