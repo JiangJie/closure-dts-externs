@@ -39,11 +39,9 @@ pnpm run lint
 
 ### Build Architecture
 
-Single-step build (same as happy-codec):
-
-**Vite + vite-plugin-dts** - Compiles TypeScript to JavaScript (CJS + ESM) and generates `.d.ts` type declarations, with two entry points:
+**Vite + vite-plugin-dts** - Compiles TypeScript to JavaScript (CJS + ESM) and generates `.d.ts` type declarations:
 - `src/main.ts` → `dist/main.{mjs,cjs}` (library API)
-- `src/cli.ts` → `dist/cli.{mjs,cjs}` (CLI entry)
+- `src/cli.ts` → `bin/cli.mjs` (CLI entry, transpiled by `scripts/postbuild.ts` which strips shebang, rewrites import path to `../dist/main.mjs`, and removes comments)
 
 External dependencies (`typescript`, `node:fs`) are NOT bundled.
 
@@ -81,6 +79,8 @@ src/
    - Global object members (`xxx.member;`)
    - Remaining interface/class prototypes (`function Type() {}` / `Type.prototype.member;`)
 
+   Note: same-name interfaces/classes from different namespaces are **merged** into one declaration (Closure externs is a flat global namespace), with members deduplicated via `Set<string>`.
+
 ### Example Usage
 
 ```ts
@@ -105,7 +105,7 @@ const externs = generate({ input: 'path/to/typings.d.ts' });
 - Test files in `tests/` directory
 - Uses Vitest with `@vitest/coverage-v8`
 - Comprehensive fixture at `tests/fixtures/comprehensive.d.ts` covers all scenarios
-- Snapshot test at `tests/snapshots/comprehensive.snap.js` guards against regressions
+- Snapshot test via vitest `toMatchSnapshot()` in `tests/__snapshots__/` guards against regressions
 - Run with: `pnpm run test`
 
 ## Toolchain
@@ -125,12 +125,13 @@ Published to **npm** as both:
 
 ## Code Style
 
-Same as happy-rusty:
 - Semicolons required
 - Trailing commas in multiline
 - Template literal spacing: `${value}` (no spaces)
 - Strict TypeScript: `noUnusedLocals`, `noUnusedParameters`, `strictNullChecks`
 - File extensions required in imports (`.ts` suffix)
+- Internal code organized with `#region` blocks: `Internal Types` → `Internal Functions`
+- Commit messages in English, following Conventional Commits
 
 ## CI/CD
 
