@@ -1,3 +1,5 @@
+# This workflow will run tests and then publish a package to npm when a release is created.
+
 name: npm Package
 
 on:
