@@ -54,7 +54,9 @@ const excludePatterns = values.exclude;
 const content = generateExterns({
     input: positionals.length === 1 ? positionals[0] : positionals,
     output: values.output,
-    fileFilter: values.filter ? (f: string) => f.includes(values.filter as string) : undefined,
+    fileFilter: values.filter
+        ? (filePath: string) => filePath.includes(values.filter as string)
+        : undefined,
     exclude: excludePatterns
         ? (name: string) => excludePatterns.some(p => matchesPattern(name, p))
         : undefined,

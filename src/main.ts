@@ -52,10 +52,10 @@ export interface GenerateExternsOptions {
      * @example
      * ```ts
      * // Only process files from a specific package
-     * fileFilter: (fileName) => fileName.includes('my-typings')
+     * fileFilter: (filePath) => filePath.includes('my-typings')
      * ```
      */
-    fileFilter?: (fileName: string) => boolean;
+    fileFilter?: (filePath: string) => boolean;
 
     /**
      * Filter to exclude declarations from output.
@@ -223,7 +223,7 @@ function buildExternsContent(
     return lines.join('\n');
 }
 
-const defaultFileFilter = (fileName: string): boolean => !fileName.includes('/typescript/lib/');
+const defaultFileFilter = (filePath: string): boolean => !filePath.includes('/typescript/lib/');
 
 /**
  * Generate Closure Compiler externs from `.d.ts` type definitions.
