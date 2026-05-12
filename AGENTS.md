@@ -23,11 +23,20 @@ pnpm run test
 
 # Run tests in watch mode
 pnpm run test:watch
+
+# Run a single test file
+pnpm vitest tests/main.test.ts
+
+# Run tests matching a name pattern
+pnpm vitest -t "expand interface members"
+
+# Update snapshots after intentional output changes
+pnpm vitest -u
 ```
 
 ### Building
 ```bash
-# Full build (includes type check, lint, vite build)
+# Full build (includes type check, lint, vite build, postbuild)
 pnpm run build
 
 # Type checking only
@@ -39,9 +48,11 @@ pnpm run lint
 
 ### Build Architecture
 
-**Vite + vite-plugin-dts** - Compiles TypeScript to JavaScript (CJS + ESM) and generates `.d.ts` type declarations:
+**Vite + unplugin-dts** - Compiles TypeScript to JavaScript (CJS + ESM) and generates bundled `.d.ts` type declarations:
 - `src/main.ts` → `dist/main.{mjs,cjs}` (library API)
 - `src/cli.ts` → `bin/cli.mjs` (CLI entry, transpiled by `scripts/postbuild.ts` which strips shebang, rewrites import path to `../dist/main.mjs`, and removes comments)
+
+`scripts/postbuild.ts` uses `import.meta.dirname` to resolve absolute paths so it works regardless of the working directory (important for GitHub Actions). Keep it absolute — do not regress to relative paths.
 
 External dependencies (`typescript`, `node:fs`) are NOT bundled.
 
@@ -62,6 +73,8 @@ src/
 - `output` (optional): write to file; if omitted returns content as string
 - `fileFilter` (optional): filter which source files to process; defaults to excluding TypeScript built-in libs
 - `exclude` (optional): callback `(name, context) => boolean` to exclude declarations; context has `kind` (`'namespace'`/`'variable'`/`'function'`/`'interface'`/`'class'`/`'member'`) and `scope` (dot-separated path)
+
+The `ExcludeContext` and `ExcludeFilter` types are exported from the package for external use.
 
 ### How It Works
 
@@ -106,14 +119,15 @@ const externs = generate({ input: 'path/to/typings.d.ts' });
 - Uses Vitest with `@vitest/coverage-v8`
 - Comprehensive fixture at `tests/fixtures/comprehensive.d.ts` covers all scenarios
 - Snapshot test via vitest `toMatchSnapshot()` in `tests/__snapshots__/` guards against regressions
+- When adding new declaration handling, extend `tests/fixtures/comprehensive.d.ts` first, then update snapshots via `pnpm vitest -u`
 - Run with: `pnpm run test`
 
 ## Toolchain
 
 - **pnpm** for package management
-- **TypeScript** with strict mode, bundler module resolution
+- **TypeScript 6** with strict mode, bundler module resolution
 - **Vite 8** (Rolldown) for JS bundling
-- **vite-plugin-dts** for `.d.ts` generation
+- **unplugin-dts** for `.d.ts` generation (bundled via `@microsoft/api-extractor`)
 - **ESLint** with typescript-eslint strict + stylistic
 - **Vitest** for testing
 
@@ -121,7 +135,13 @@ const externs = generate({ input: 'path/to/typings.d.ts' });
 
 Published to **npm** as both:
 - A library (`import { generate } from 'closure-dts-externs'`)
-- A CLI tool (`npx closure-dts-externs [dtsEntry] [outputPath]`)
+- A CLI tool (`npx closure-dts-externs <input...> [options]`)
+
+CLI options: `--filter <substring>`, `--exclude <pattern>` (repeatable, supports `*` wildcards), `-o/--output <path>`, `-h/--help`.
+
+Published files (from `package.json` `files` field): `bin/`, `dist/`, `LICENSE`, `README.md`, `CHANGELOG.md`.
+
+`bin/` and `dist/` are in `.gitignore` — never commit build artifacts.
 
 ## Code Style
 
@@ -131,9 +151,15 @@ Published to **npm** as both:
 - Strict TypeScript: `noUnusedLocals`, `noUnusedParameters`, `strictNullChecks`
 - File extensions required in imports (`.ts` suffix)
 - Internal code organized with `#region` blocks: `Internal Types` → `Internal Functions`
+- Public API requires JSDoc with `@example` (see `generate` in `src/main.ts`)
+- Comments explain *why*, not *what*
+- Add `/*#__PURE__*/` to top-level function call expressions to help bundler tree-shaking
+- Prefer `interface` over `type` (except for unions and other special cases)
+- Avoid `any`; use `unknown` when a type cannot be inferred
 - Commit messages in English, following Conventional Commits
 
 ## CI/CD
 
-- **test.yml** - Runs tests on push to main
-- **npm-publish.yml** - Publishes to npm on release
+- **test.yml** - Runs tests on push to main; uploads coverage to Codecov; reusable via `workflow_call` (workflow-level `permissions: contents: read`)
+- **npm-publish.yml** - Triggers on GitHub Release; publishes to npm with **OIDC + Provenance** (`id-token: write`, no `NPM_TOKEN`); reuses `test.yml`
+- **npm-publish-github-packages.yml** - Triggers on GitHub Release; publishes a `@jiangjie/closure-dts-externs` mirror to GitHub Packages using `GITHUB_TOKEN`
